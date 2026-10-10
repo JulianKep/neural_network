@@ -17,7 +17,7 @@ typedef struct model_t
     double input;
     double target;
     double weight1;
-    double bias1;
+    double bias_1_1;
 
 } model_t;
 
@@ -27,7 +27,7 @@ typedef struct model_t
 //[Cost, activation_after_sigmoid, activation_after_weight_and_bias]
 void forward_pass(model_t *in, double* out){
     //calculate neuron activation
-    double a = (in->input * in->weight1) + in->bias1;
+    double a = (in->input * in->weight1) + in->bias_1_1;
 
     //use sigmoid activation
     double a_f = sigmoid(a);
@@ -41,7 +41,7 @@ void forward_pass(model_t *in, double* out){
 }
 
 
-void neural_chain(){
+void hidden_layer(){
 
     double learning_rate = 0.01;
 
@@ -49,7 +49,7 @@ void neural_chain(){
         .input = 2.1,
         .target = 1,
         .weight1 = 2.0,
-        .bias1 = -3.8,
+        .bias_1_1 = -3.8,
     };
 
 
@@ -80,7 +80,7 @@ void neural_chain(){
 
 int main(){
     
-    neural_chain();
+    hidden_layer();
 
     return 0;
 

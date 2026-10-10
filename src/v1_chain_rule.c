@@ -19,7 +19,7 @@ void chain_rule(){
 
 }
 
-void neural_chain(){
+void hidden_layer(){
 
     double learning_rate = 0.1;
 
