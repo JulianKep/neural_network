@@ -68,47 +68,55 @@ void forward_pass(double input, double target, model_t *in, double* out){
 }
 
 
-void hidden_layer(double input, double target, double learning_rate, model_t *m){
+double one_hidden_layer(double input, double target, double learning_rate, model_t *m){
 
 
 
     double res[8];
-
-
     forward_pass(input, target, m, res);
 
     //printf("cost: %f\n", *res);
 
-    //input to hidden layer weights
-    double dC_dw_i_to_1_1 = (2 * (res[7] - target)) * m->weight_1_1_to_o * sigmoid_div(res[1]) * input;
-    double dC_dw_i_to_1_2 = (2 * (res[7] - target)) * m->weight_1_2_to_o * sigmoid_div(res[2]) * input;
-    double dC_dw_i_to_1_3 = (2 * (res[7] - target)) * m->weight_1_3_to_o * sigmoid_div(res[3]) * input;
+    ////CALCULATE GRADIENTS
 
-    m->weight_i_to_1_1 += learning_rate * -dC_dw_i_to_1_1;
-    m->weight_i_to_1_2 += learning_rate * -dC_dw_i_to_1_2;
-    m->weight_i_to_1_3 += learning_rate * -dC_dw_i_to_1_3;
+    //output bias
+    double dC_db_o = (2 * (res[7] - target));
+
+    //hidden layer weights to output
+    double dC_dw_1_1_to_o = dC_db_o * res[4];
+    double dC_dw_1_2_to_o = dC_db_o * res[5];
+    double dC_dw_1_3_to_o = dC_db_o * res[6];
+
+
 
     //hidden layer biases
-    double dC_db_1_1 = (2 * (res[7] - target)) * m->weight_1_1_to_o * sigmoid_div(res[1]);
-    double dC_db_1_2 = (2 * (res[7] - target)) * m->weight_1_2_to_o * sigmoid_div(res[2]);
-    double dC_db_1_3 = (2 * (res[7] - target)) * m->weight_1_3_to_o * sigmoid_div(res[3]);
+    double dC_db_1_1 = dC_db_o * m->weight_1_1_to_o * sigmoid_div(res[1]);
+    double dC_db_1_2 = dC_db_o * m->weight_1_2_to_o * sigmoid_div(res[2]);
+    double dC_db_1_3 = dC_db_o * m->weight_1_3_to_o * sigmoid_div(res[3]);
 
-    m->bias_1_1 += learning_rate * -dC_db_1_1;
-    m->bias_1_2 += learning_rate * -dC_db_1_2;
-    m->bias_1_3 += learning_rate * -dC_db_1_3;
+    //input to hidden layer weights
+    double dC_dw_i_to_1_1 = dC_db_1_1 * input;
+    double dC_dw_i_to_1_2 = dC_db_1_2 * input;
+    double dC_dw_i_to_1_3 = dC_db_1_3 * input;
 
-    //hidden layer biases to output
-    double dC_dw_1_1_to_o = (2 * (res[7] - target)) * res[4];
-    double dC_dw_1_2_to_o = (2 * (res[7] - target)) * res[5];
-    double dC_dw_1_3_to_o = (2 * (res[7] - target)) * res[6];
+
+    ////PERFORM GRADIENT DESCENT
+    m->bias_output += learning_rate * -dC_db_o;
 
     m->weight_1_1_to_o += learning_rate * -dC_dw_1_1_to_o;
     m->weight_1_2_to_o += learning_rate * -dC_dw_1_2_to_o;
     m->weight_1_3_to_o += learning_rate * -dC_dw_1_3_to_o;
 
-    //output layer bias
-    double dC_db_o = (2 * (res[7] - target));
-    m->bias_output += learning_rate * -dC_db_o;
+    m->bias_1_1 += learning_rate * -dC_db_1_1;
+    m->bias_1_2 += learning_rate * -dC_db_1_2;
+    m->bias_1_3 += learning_rate * -dC_db_1_3;
+
+    m->weight_i_to_1_1 += learning_rate * -dC_dw_i_to_1_1;
+    m->weight_i_to_1_2 += learning_rate * -dC_dw_i_to_1_2;
+    m->weight_i_to_1_3 += learning_rate * -dC_dw_i_to_1_3;
+
+    return res[0];
+
 
 }
 
@@ -133,12 +141,17 @@ model_t m = {
 
     //loop through training data, perform stochastic gradient descent
     for(size_t epoch = 0; epoch < 100000; epoch ++){
+        
+        double cost;
 
         for(int i = 0; i < sizeof(training) / sizeof(training[0]); i++){
-                hidden_layer(training[i].x_value, training[i].y_value, 0.1, &m);
 
-    
-    }
+                cost = one_hidden_layer(training[i].x_value, training[i].y_value, 0.01, &m);
+        }
+
+        if(epoch % 10 == 0){
+            printf("%f\n", cost);
+        }
 }
 
     double out[8];
