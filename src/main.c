@@ -5,7 +5,7 @@
 
 #include "../data/sinus.h"
 
-#define HIDDDEN 5
+#define HIDDDEN 10
 
 //weight member name carries information of what neuron it is attached to
 //double weight_i_to_1_2; -> weight from input neuron to neron in hidden layer , second neuron from the top
@@ -53,7 +53,7 @@ void forward_pass(double input, double target, model_t *in, f_pass_return_t* out
     }
 
     //output neuron activation
-    double sum_weight_activation_products;
+    double sum_weight_activation_products = 0;
 
     for(int i = 0; i < HIDDDEN; i++){
 
@@ -85,42 +85,46 @@ double one_hidden_layer(double input, double target, double learning_rate, model
     ////CALCULATE GRADIENTS
 
     //output bias
-    double dC_db_o = (2 * (res[7] - target));
+    double dC_db_o = (2 * (res.a_o - target));
+
 
     //hidden layer weights to output
-    double dC_dw_1_1_to_o = dC_db_o * res[4];
-    double dC_dw_1_2_to_o = dC_db_o * res[5];
-    double dC_dw_1_3_to_o = dC_db_o * res[6];
+    double dc_dw_1_n_to_o[HIDDDEN];
 
+    for(int i = 0; i < HIDDDEN; i++){
+        dc_dw_1_n_to_o[i] = dC_db_o * res.sa_n[i];
+    }
 
 
     //hidden layer biases
-    double dC_db_1_1 = dC_db_o * m->weight_1_1_to_o * sigmoid_div(res[1]);
-    double dC_db_1_2 = dC_db_o * m->weight_1_2_to_o * sigmoid_div(res[2]);
-    double dC_db_1_3 = dC_db_o * m->weight_1_3_to_o * sigmoid_div(res[3]);
+    double dC_db_1_n[HIDDDEN];
+    for(int i = 0; i < HIDDDEN; i++){
+        dC_db_1_n[i] = dC_db_o * m->weights_h_to_o[i] * sigmoid_div(res.a_1_n[i]);
+    }
 
     //input to hidden layer weights
-    double dC_dw_i_to_1_1 = dC_db_1_1 * input;
-    double dC_dw_i_to_1_2 = dC_db_1_2 * input;
-    double dC_dw_i_to_1_3 = dC_db_1_3 * input;
+    double dC_dw_i_to_1_n[HIDDDEN];
+    for(int i = 0; i < HIDDDEN; i++){
+        dC_dw_i_to_1_n[i] = dC_db_1_n[i] * input;
+    }
 
 
     ////PERFORM GRADIENT DESCENT
     m->bias_output += learning_rate * -dC_db_o;
 
-    m->weight_1_1_to_o += learning_rate * -dC_dw_1_1_to_o;
-    m->weight_1_2_to_o += learning_rate * -dC_dw_1_2_to_o;
-    m->weight_1_3_to_o += learning_rate * -dC_dw_1_3_to_o;
+    for(int i = 0; i < HIDDDEN; i++){
+        m->weights_h_to_o[i] += learning_rate * -dc_dw_1_n_to_o[i];
+    }
 
-    m->bias_1_1 += learning_rate * -dC_db_1_1;
-    m->bias_1_2 += learning_rate * -dC_db_1_2;
-    m->bias_1_3 += learning_rate * -dC_db_1_3;
+    for(int i = 0; i < HIDDDEN; i++){
+        m->biases_h[i] += learning_rate * -dC_db_1_n[i];
+    }
 
-    m->weight_i_to_1_1 += learning_rate * -dC_dw_i_to_1_1;
-    m->weight_i_to_1_2 += learning_rate * -dC_dw_i_to_1_2;
-    m->weight_i_to_1_3 += learning_rate * -dC_dw_i_to_1_3;
+    for(int i = 0; i < HIDDDEN; i++){
+        m->weights_i_to_h[i] += learning_rate * -dC_dw_i_to_1_n[i];
+    }
 
-    return res[0];
+    return res.cost;
 
 
 }
@@ -129,17 +133,26 @@ double one_hidden_layer(double input, double target, double learning_rate, model
 int main(){
 
 
-model_t m = {
+/* model_t m = {
 
-    .weights_i_to_h = {2.0, 1.0, 2.1},
-    .biases_h =       {1.1, 4.1, 3.0},
-    .weights_h_to_o = {4.3, 2.2, 1.0},
+    .weights_i_to_h = {2.0, 1.0, 2.1, 1.0, 2.1},
+    .biases_h =       {1.1, 4.1, 3.0, 1.0, 2.1},
+    .weights_h_to_o = {4.3, 2.2, 1.0, 1.0, 1.1},
 
     .bias_output =     1.0,
 };
+ */
+model_t m = {
+
+    .weights_i_to_h = {1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5},
+    .biases_h       = {-0.5, -1.5, -2.5, -3.5, -4.5, -5.5, -6.5, -7.5, -8.5, -9.5},
+    .weights_h_to_o = {1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0},
+
+    .bias_output = 1.0,
+};
 
     //loop through training data, perform stochastic gradient descent
-    for(size_t epoch = 0; epoch < 100000; epoch ++){
+    for(size_t epoch = 0; epoch < 1000; epoch ++){
         
         double cost;
 
@@ -148,15 +161,15 @@ model_t m = {
                 cost = one_hidden_layer(training[i].x_value, training[i].y_value, 0.01, &m);
         }
 
-        if(epoch % 10 == 0){
+        if(epoch % 1000 == 0){
             printf("%f\n", cost);
         }
 }
 
-    double out[8];
-    forward_pass(0.5, 0.479, &m, out);
-    printf("final activation: %f\n", out[7]);
-    printf("cost: %f\n", out[0]);
+    f_pass_return_t out;
+    forward_pass(0.5, 0.479, &m, &out);
+    printf("final activation: %f\n", out.a_o);
+    printf("cost: %f\n", out.cost);
     
 
     return 0;
