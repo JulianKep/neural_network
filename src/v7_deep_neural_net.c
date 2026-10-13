@@ -9,7 +9,7 @@
 
 
 #define HIDDEN_LAYERS 3
-#define HIDDDEN_NEURONS 4
+#define HIDDDEN_NEURONS 6
 
 
 typedef struct model_t {
@@ -89,9 +89,11 @@ void forward_pass(double input, double target, model_t *in, f_pass_return_t* out
         //calcuale activation for each neuron
         for(size_t neuron = 0; neuron < HIDDDEN_NEURONS; neuron++){
 
+
+            out->a_p[layer][neuron] = 0;
             //sum over all incoming activations
             for(size_t activation = 0; activation < HIDDDEN_NEURONS; activation++){
-                out->a_p[layer][neuron]+= in->weights[layer][activation][neuron] * out->a_s[layer-1][activation]; 
+                out->a_p[layer][neuron] += in->weights[layer-1][activation][neuron] * out->a_s[layer-1][activation]; 
             }
 
             //add bias
@@ -102,6 +104,7 @@ void forward_pass(double input, double target, model_t *in, f_pass_return_t* out
         } 
     }
 
+    out->a_o = 0;
     //calculate final layer activation
     for(size_t activation = 0; activation < HIDDDEN_NEURONS; activation++){
 
@@ -125,7 +128,7 @@ void forward_pass(double input, double target, model_t *in, f_pass_return_t* out
 double three_hidden_layers(double input, double target, double learning_rate, model_t *m){
 
 
-    f_pass_return_t res;
+    f_pass_return_t res = {0};
     forward_pass(input, target, m, &res);
 
 
@@ -165,9 +168,14 @@ double three_hidden_layers(double input, double target, double learning_rate, mo
     //biases of middle hidden layer
     double dC_db_2[HIDDDEN_NEURONS];
     for(size_t bias = 0; bias < HIDDDEN_NEURONS; bias++){
+
+        double sum = 0;
+
         for(size_t following_neuron = 0; following_neuron < HIDDDEN_NEURONS; following_neuron++){
-            dC_db_2[bias] = dC_db_h_to_o[following_neuron] * m->weights[HIDDEN_LAYERS-1][bias][following_neuron] * sigmoid_div(res.a_p[HIDDEN_LAYERS-2][bias]);
+             sum += dC_db_h_to_o[following_neuron] * m->weights[HIDDEN_LAYERS-2][bias][following_neuron] ;
         }
+
+        dC_db_2[bias] = sum * sigmoid_div(res.a_p[HIDDEN_LAYERS-2][bias]);
 
     }
 
@@ -189,9 +197,14 @@ double three_hidden_layers(double input, double target, double learning_rate, mo
     //biases of first hidden layer
     double dC_db_1[HIDDDEN_NEURONS];
     for(size_t bias = 0; bias < HIDDDEN_NEURONS; bias++){
+
+        double sum = 0;
+
         for(size_t following_neuron = 0; following_neuron < HIDDDEN_NEURONS; following_neuron++){
-            dC_db_1[bias] = dC_db_2[following_neuron] * m->weights[HIDDEN_LAYERS-2][bias][following_neuron] * sigmoid_div(res.a_p[HIDDEN_LAYERS-3][bias]);
+            sum += dC_db_2[following_neuron] * m->weights[HIDDEN_LAYERS-3][bias][following_neuron];
         }
+
+        dC_db_1[bias] = sum  * sigmoid_div(res.a_p[HIDDEN_LAYERS-3][bias]);
 
     }
 
@@ -297,12 +310,12 @@ model_t m = {
                 cost = three_hidden_layers(training[i].x_value, training[i].y_value, 0.01, &m);
         }
 
-        if(epoch % 1000 == 0){
-            printf("%f\n", cost);
+        if(epoch % 100 == 0){
+            printf("EPOCH: %d, COST: %f\n", epoch, cost);
         }
 }
 
-    f_pass_return_t out;
+    f_pass_return_t out = {0};
     forward_pass(0.5, 0.479, &m, &out);
     printf("final activation: %f\n", out.a_o);
     printf("cost: %f\n", out.cost);
