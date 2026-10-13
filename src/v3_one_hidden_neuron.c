@@ -47,7 +47,7 @@ void forward_pass(model_t *in, double* out){
 }
 
 
-void one_hidden_layer(double input, double target){
+void three_hidden_layers(double input, double target){
 
     double learning_rate = 0.01;
 
@@ -107,7 +107,7 @@ void one_hidden_layer(double input, double target){
 
 int main(){
     
-    one_hidden_layer(4, 1);
+    three_hidden_layers(4, 1);
 
     return 0;
 

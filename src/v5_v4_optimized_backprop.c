@@ -68,7 +68,7 @@ void forward_pass(double input, double target, model_t *in, double* out){
 }
 
 
-double one_hidden_layer(double input, double target, double learning_rate, model_t *m){
+double three_hidden_layers(double input, double target, double learning_rate, model_t *m){
 
 
 
@@ -146,7 +146,7 @@ model_t m = {
 
         for(int i = 0; i < sizeof(training) / sizeof(training[0]); i++){
 
-                cost = one_hidden_layer(training[i].x_value, training[i].y_value, 0.01, &m);
+                cost = three_hidden_layers(training[i].x_value, training[i].y_value, 0.01, &m);
         }
 
         if(epoch % 10 == 0){

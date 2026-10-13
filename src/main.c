@@ -122,7 +122,7 @@ void forward_pass(double input, double target, model_t *in, f_pass_return_t* out
 
 
 
-double one_hidden_layer(double input, double target, double learning_rate, model_t *m){
+double three_hidden_layers(double input, double target, double learning_rate, model_t *m){
 
 
     f_pass_return_t res;
@@ -132,47 +132,124 @@ double one_hidden_layer(double input, double target, double learning_rate, model
     ////CALCULATE GRADIENTS
 
     //output bias
-    double dC_db_o = (2 * (res.a_o - target));
+    double dC_db_o = (2 * (res.a_o - target));  ///CHECK
 
 
-    //hidden layer weights to output
-    double dc_dw_1_n_to_o[HIDDDEN_NEURONS];
-
-    for(int i = 0; i < HIDDDEN_NEURONS; i++){
-        dc_dw_1_n_to_o[i] = dC_db_o * res.sa_n[i];
+    //last hidden layer weights to output
+    double dC_dw_h_to_o[HIDDDEN_NEURONS];
+    for(size_t weight = 0; weight < HIDDDEN_NEURONS; weight++){
+        dC_dw_h_to_o[weight] = dC_db_o * res.a_s[HIDDEN_LAYERS-1][weight];
     }
 
 
-    //hidden layer biases
-    double dC_db_1_n[HIDDDEN_NEURONS];
-    for(int i = 0; i < HIDDDEN_NEURONS; i++){
-        dC_db_1_n[i] = dC_db_o * m->weights_h_to_o[i] * sigmoid_div(res.a_1_n[i]);
+    //last hidden layer biases to output
+    double dC_db_h_to_o[HIDDDEN_NEURONS];
+    for(size_t bias = 0; bias < HIDDDEN_NEURONS; bias++){
+        dC_db_h_to_o[bias] = dC_db_o * m->weights_h_to_o[bias] * sigmoid_div(res.a_p[HIDDEN_LAYERS-1][bias]);
     }
 
-    //input to hidden layer weights
-    double dC_dw_i_to_1_n[HIDDDEN_NEURONS];
-    for(int i = 0; i < HIDDDEN_NEURONS; i++){
-        dC_dw_i_to_1_n[i] = dC_db_1_n[i] * input;
+
+    //weights between middle hidden layer to last hidden layer
+    double dC_dw_2_3[HIDDDEN_NEURONS][HIDDDEN_NEURONS];
+    for(size_t to_neuron = 0; to_neuron < HIDDDEN_NEURONS; to_neuron++){
+
+        for(size_t from_neuron = 0; from_neuron < HIDDDEN_NEURONS; from_neuron++){
+
+            dC_dw_2_3[from_neuron][to_neuron] = dC_db_h_to_o[to_neuron] * res.a_s[HIDDEN_LAYERS-2][from_neuron];
+
+        }
     }
+
+    /////////////////////////////////////////// THIS HAS TO BE LOOPED TO MAKE IT PARAMETRIC, HARDCODED 3 HIDDEN LAYERS FOR NOW
+
+    //biases of middle hidden layer
+    double dC_db_2[HIDDDEN_NEURONS];
+    for(size_t bias = 0; bias < HIDDDEN_NEURONS; bias++){
+        for(size_t following_neuron = 0; following_neuron < HIDDDEN_NEURONS; following_neuron++){
+            dC_db_2[bias] = dC_db_h_to_o[following_neuron] * m->weights[HIDDEN_LAYERS-1][bias][following_neuron] * sigmoid_div(res.a_p[HIDDEN_LAYERS-2][bias]);
+        }
+
+    }
+
+
+    //weights between first hidden layer to last middle hidden layer
+    double dC_dw_1_2[HIDDDEN_NEURONS][HIDDDEN_NEURONS];
+    for(size_t to_neuron = 0; to_neuron < HIDDDEN_NEURONS; to_neuron++){
+
+        for(size_t from_neuron = 0; from_neuron < HIDDDEN_NEURONS; from_neuron++){
+
+            dC_dw_1_2[from_neuron][to_neuron] = dC_db_2[to_neuron] * res.a_s[HIDDEN_LAYERS-3][from_neuron];
+
+        }
+    }
+
+
+    ///////////////////////////////////////////
+
+    //biases of first hidden layer
+    double dC_db_1[HIDDDEN_NEURONS];
+    for(size_t bias = 0; bias < HIDDDEN_NEURONS; bias++){
+        for(size_t following_neuron = 0; following_neuron < HIDDDEN_NEURONS; following_neuron++){
+            dC_db_1[bias] = dC_db_2[following_neuron] * m->weights[HIDDEN_LAYERS-2][bias][following_neuron] * sigmoid_div(res.a_p[HIDDEN_LAYERS-3][bias]);
+        }
+
+    }
+
+    //weights of input to first hidden layer
+    double dC_dw_i_to_h[HIDDDEN_NEURONS];
+    for(size_t weight = 0; weight < HIDDDEN_NEURONS; weight++){
+        dC_dw_i_to_h[weight] = dC_db_1[weight] * input;
+    }
+
+
+
 
 
     ////PERFORM GRADIENT DESCENT
+
+    //output bias
     m->bias_output += learning_rate * -dC_db_o;
 
-    for(int i = 0; i < HIDDDEN_NEURONS; i++){
-        m->weights_h_to_o[i] += learning_rate * -dc_dw_1_n_to_o[i];
+    //last hidden layer weights to output
+    for(size_t weight = 0; weight < HIDDDEN_NEURONS; weight++){
+        m->weights_h_to_o[weight] += learning_rate * -dC_dw_h_to_o[weight];
     }
 
-    for(int i = 0; i < HIDDDEN_NEURONS; i++){
-        m->biases_h[i] += learning_rate * -dC_db_1_n[i];
+    //last hidden layer biases to output
+    for(size_t bias = 0; bias < HIDDDEN_NEURONS; bias++){
+        m->biases[HIDDEN_LAYERS-1][bias] += learning_rate * -dC_db_h_to_o[bias];
     }
 
-    for(int i = 0; i < HIDDDEN_NEURONS; i++){
-        m->weights_i_to_h[i] += learning_rate * -dC_dw_i_to_1_n[i];
+    //weights between middle hidden layer to last hidden layer
+    for(size_t from_neuron = 0; from_neuron < HIDDDEN_NEURONS; from_neuron++){
+        for(size_t to_neuron = 0; to_neuron < HIDDDEN_NEURONS; to_neuron++){
+            m->weights[HIDDEN_LAYERS-2][from_neuron][to_neuron] += learning_rate * -dC_dw_2_3[from_neuron][to_neuron];
+        }
+    }
+
+    //biases of middle hidden layer
+    for(size_t bias = 0; bias < HIDDDEN_NEURONS; bias++){
+        m->biases[HIDDEN_LAYERS-2][bias] += learning_rate * -dC_db_2[bias];
+    }
+
+    //weights between first hidden layer to last middle hidden layer
+    for(size_t from_neuron = 0; from_neuron < HIDDDEN_NEURONS; from_neuron++){
+        for(size_t to_neuron = 0; to_neuron < HIDDDEN_NEURONS; to_neuron++){
+            m->weights[HIDDEN_LAYERS-3][from_neuron][to_neuron] += learning_rate * -dC_dw_1_2[from_neuron][to_neuron];
+        }
+    }
+
+    //biases of first hidden layer
+    for(size_t bias = 0; bias < HIDDDEN_NEURONS; bias++){
+        m->biases[HIDDEN_LAYERS-3][bias] += learning_rate * -dC_db_1[bias];
+    }
+
+    //weights of input to first hidden layer
+    for(size_t weight = 0; weight < HIDDDEN_NEURONS; weight++){
+        m->weights_i_to_h[weight] += learning_rate * -dC_dw_i_to_h[weight];
     }
 
     return res.cost;
-
 
 }
 
@@ -187,7 +264,6 @@ model_t m = {
         {1.0, 3.0, -2.0, 4.4}, //first hidden layer
         {1.0, 1.0, -2.0, 1.4},
         {8.0, 4.0, -9.0, 4.3},
-        {3.0, 7.0, -6.0, 4.4},
     },
     .weights = {
         { // from first hidden layer to second
@@ -204,22 +280,21 @@ model_t m = {
             {2.0, -1.0, 4.2, -1.1},
 
         },
-
     },
+    .weights_h_to_o = {1.1, -3.0, 6.0, -4.0},
     .bias_output = 2.0,
-    .weights_i_to_h = {1.1, -3.0, 6.0, -4.0},
 };
 
 
 
     //loop through training data, perform stochastic gradient descent
-    for(size_t epoch = 0; epoch < 1000; epoch ++){
+    for(size_t epoch = 0; epoch < 10000; epoch ++){
         
         double cost;
 
         for(int i = 0; i < sizeof(training) / sizeof(training[0]); i++){
 
-                cost = one_hidden_layer(training[i].x_value, training[i].y_value, 0.01, &m);
+                cost = three_hidden_layers(training[i].x_value, training[i].y_value, 0.01, &m);
         }
 
         if(epoch % 1000 == 0){

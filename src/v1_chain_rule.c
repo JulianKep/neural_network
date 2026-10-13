@@ -19,7 +19,7 @@ void chain_rule(){
 
 }
 
-void one_hidden_layer(){
+void three_hidden_layers(){
 
     double learning_rate = 0.1;
 
